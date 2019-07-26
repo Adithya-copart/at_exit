@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 require 'rack/lobster'
-require 'concurrent'
 
 java_import java.util.concurrent.ThreadPoolExecutor
 java_import java.lang.Runnable
