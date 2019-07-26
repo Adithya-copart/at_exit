@@ -1,12 +1,39 @@
 # frozen_string_literal: true
-
 require 'rack/lobster'
 require 'concurrent'
 
-existing_threads = Thread.list
-$pool = Concurrent::ThreadPoolExecutor.new(min_threads: 2, max_threads: 2, auto_terminate: false)
+java_import java.util.concurrent.ThreadPoolExecutor
+java_import java.lang.Runnable
 
-# This is best I could mimic https://github.com/brandonhilkert/sucker_punch/blob/d06ba290be4d56fbbd45d37f73c47bd441ad0224/lib/sucker_punch/queue.rb#L74-L110
+# From https://github.com/ruby-concurrency/concurrent-ruby/blob/d11b29c37b81320ca7126cc9cd85f4f3d17a78a3/lib/concurrent/executor/java_thread_pool_executor.rb#L111-L117
+$pool = java.util.concurrent.ThreadPoolExecutor.new(
+    2,
+    2,
+    60,
+    java.util.concurrent.TimeUnit::SECONDS,
+    java.util.concurrent.LinkedBlockingQueue.new,
+    java.util.concurrent.ThreadPoolExecutor::AbortPolicy.new
+  )
+
+# From concurrent-ruby: https://github.com/ruby-concurrency/concurrent-ruby/blob/d11b29c37b81320ca7126cc9cd85f4f3d17a78a3/lib/concurrent/executor/java_executor_service.rb#L77-L87
+class Job
+  include Runnable
+  def initialize(args, block)
+    @args = args
+    @block = block
+  end
+
+  def run
+    @block.call(*@args)
+  end
+end
+
+existing_threads = Thread.list
+
+2.times do
+  $pool.submit Job.new(nil, proc{loop { bool = true; sleep 0.5 }})
+end
+
 at_exit do
   # Add 5 second wait
   deadline = Time.now + 5
@@ -16,21 +43,14 @@ at_exit do
   p 'Waiting until deadline'
   while true
     break if (Thread.list - existing_threads == [])
-    sleep 0.2
+    # sleep 0.2
     if Time.now > deadline
       # This is never printed
       p 'Deadline is over. Killing the threadpool'
-      $pool.kill
+      $pool.shutdownNow
       break
     end
   end
-
-  # This is never printed
-  p 'Done in at exit'
-end
-
-2.times do
-  $pool << proc {loop { bool = true; sleep 0.5 }}
 end
 
 use Rack::ShowExceptions
