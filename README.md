@@ -6,4 +6,6 @@ This is a sample app
 
     $ bundle
 
-    $ RUBYOPT=-d jruby --debug -S puma -p 4567
+    $ jruby -S puma
+
+Hit Ctrl+C or send a SIGINT to this process
