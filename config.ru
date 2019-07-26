@@ -10,6 +10,7 @@ $pool = Concurrent::ThreadPoolExecutor.new(min_threads: 2, max_threads: 2, auto_
 
 deadline = Time.now + 10
 
+# This is best I could mimic https://github.com/brandonhilkert/sucker_punch/blob/d06ba290be4d56fbbd45d37f73c47bd441ad0224/lib/sucker_punch/queue.rb#L74-L110
 at_exit do
   p 'Requesting threadpool shutdown'
   $pool.shutdown
